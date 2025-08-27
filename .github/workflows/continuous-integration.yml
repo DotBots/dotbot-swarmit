@@ -1,0 +1,38 @@
+name: CI 
+
+on:
+  push:
+    branches:
+      - main
+    tags: '*'
+
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["dotbot-v2", "dotbot-v3"]
+        config: ["Debug", "Release"]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+        with:
+          submodules: 'true'
+      - name: Build projects
+        run: BUILD_TARGET=${{ matrix.target }} BUILD_CONFIG=${{ matrix.config }} make docker
+      - name: Build for release and convert elf artifacts to hex
+        if: matrix.config == 'Release'
+        run: BUILD_TARGET=${{ matrix.target }} DOCKER_TARGETS="artifacts" BUILD_CONFIG=${{ matrix.config }} make docker
+
+  style:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+        with:
+          submodules: 'true'
+      - name: Check style
+        run: make check-format
