@@ -29,7 +29,7 @@
     build_treat_warnings_as_errors="Yes"
     c_additional_options="-Wno-strict-prototypes"
     c_preprocessor_definitions="ARM_MATH_ARMV8MML;NRF5340_XXAA;NRF_APPLICATION;__NRF_FAMILY;CONFIG_NFCT_PINS_AS_GPIOS;FLASH_PLACEMENT=1;BOARD_DOTBOT_V3;OTA_USE_CRYPTO;NRF_TRUSTZONE_NONSECURE;USE_SWARMIT"
-    c_user_include_directories="$(SolutionDir)/../bsp;$(SolutionDir)/../crypto;$(SolutionDir)/../drv;$(PackagesDir)/nRF/Device/Include;$(PackagesDir)/CMSIS_5/CMSIS/Core/Include"
+    c_user_include_directories="$(SolutionDir)/dotbot-firmware/bsp;$(SolutionDir)/dotbot-firmware/crypto;$(SolutionDir)/dotbot-firmware/drv;$(PackagesDir)/nRF/Device/Include;$(PackagesDir)/CMSIS_5/CMSIS/Core/Include"
     clang_machine_outliner="Yes"
     compiler_color_diagnostics="Yes"
     debug_register_definition_file="$(PackagesDir)/nRF/XML/nrf5340_application_Registers.xml"
@@ -65,126 +65,7 @@
     gcc_debugging_level="Level 2"
     gcc_omit_frame_pointer="Yes"
     gcc_optimization_level="Level 2 balanced" />
-  <project Name="swarmit_timer">
-    <configuration
-      Name="Common"
-      project_dependencies="00bsp_timer(bsp);00bsp_gpio(bsp)"
-      project_directory="timer"
-      linker_additional_files="$(ProjectDir)/../cmse_implib$(LIB)"
-      project_type="Executable" />
-    <folder Name="Setup">
-      <file file_name="$(ProjectDir)/../$(Target)_flash_placement.xml" />
-      <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
-        <configuration Name="Common" file_type="Memory Map" />
-      </file>
-      <file file_name="../../nRF/Scripts/nRF_Target.js">
-        <configuration Name="Common" file_type="Reset Script" />
-      </file>
-    </folder>
-    <folder Name="Source">
-      <file file_name="main.c" />
-    </folder>
-    <folder Name="System">
-      <file file_name="$(ProjectDir)/../../nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../../nRF/System/cpu.c" />
-    </folder>
-  </project>
-  <import file_name="../bsp/bsp.emProject" />
-  <import file_name="../drv/drv.emProject" />
-  <project Name="swarmit_motors">
-    <configuration
-      Name="Common"
-      project_dependencies="00bsp_dotbot_board(bsp);00bsp_timer(bsp);00drv_motors(drv)"
-      project_directory="motors"
-      linker_additional_files="$(ProjectDir)/../cmse_implib$(LIB)"
-      project_type="Executable" />
-    <folder Name="Setup">
-      <file file_name="$(ProjectDir)/../$(Target)_flash_placement.xml" />
-      <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
-        <configuration Name="Common" file_type="Memory Map" />
-      </file>
-      <file file_name="../../nRF/Scripts/nRF_Target.js">
-        <configuration Name="Common" file_type="Reset Script" />
-      </file>
-    </folder>
-    <folder Name="Source">
-      <file file_name="main.c" />
-    </folder>
-    <folder Name="System">
-      <file file_name="$(ProjectDir)/../../nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../../nRF/System/cpu.c" />
-    </folder>
-  </project>
-  <project Name="swarmit_move">
-    <configuration
-      Name="Common"
-      project_dependencies="00bsp_timer(bsp);00drv_move(drv)"
-      project_directory="move"
-      linker_additional_files="$(ProjectDir)/../cmse_implib$(LIB)"
-      project_type="Executable" />
-    <folder Name="Setup">
-      <file file_name="$(ProjectDir)/../$(Target)_flash_placement.xml" />
-      <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
-        <configuration Name="Common" file_type="Memory Map" />
-      </file>
-      <file file_name="../../nRF/Scripts/nRF_Target.js">
-        <configuration Name="Common" file_type="Reset Script" />
-      </file>
-    </folder>
-    <folder Name="Source">
-      <file file_name="main.c" />
-    </folder>
-    <folder Name="System">
-      <file file_name="$(ProjectDir)/../../nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../../nRF/System/cpu.c" />
-    </folder>
-  </project>
-  <project Name="swarmit_rgbled">
-    <configuration
-      Name="Common"
-      project_dependencies="00bsp_dotbot_board(bsp);00bsp_timer(bsp);00drv_rgbled_pwm(drv)"
-      project_directory="rgbled"
-      linker_additional_files="$(ProjectDir)/../cmse_implib$(LIB)"
-      project_type="Executable" />
-    <folder Name="Setup">
-      <file file_name="$(ProjectDir)/../$(Target)_flash_placement.xml" />
-      <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
-        <configuration Name="Common" file_type="Memory Map" />
-      </file>
-      <file file_name="../../nRF/Scripts/nRF_Target.js">
-        <configuration Name="Common" file_type="Reset Script" />
-      </file>
-    </folder>
-    <folder Name="Source">
-      <file file_name="main.c" />
-    </folder>
-    <folder Name="System">
-      <file file_name="$(ProjectDir)/../../nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../../nRF/System/cpu.c" />
-    </folder>
-  </project>
-  <project Name="swarmit_dotbot">
-    <configuration
-      Name="Common"
-      project_dependencies="00bsp_dotbot_board(bsp);00bsp_timer(bsp);00drv_dotbot_protocol(drv);00drv_rgbled_pwm(drv);00drv_motors(drv)"
-      project_directory="dotbot"
-      linker_additional_files="$(ProjectDir)/../cmse_implib$(LIB)"
-      project_type="Executable" />
-    <folder Name="Setup">
-      <file file_name="$(ProjectDir)/../$(Target)_flash_placement.xml" />
-      <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
-        <configuration Name="Common" file_type="Memory Map" />
-      </file>
-      <file file_name="../../nRF/Scripts/nRF_Target.js">
-        <configuration Name="Common" file_type="Reset Script" />
-      </file>
-    </folder>
-    <folder Name="Source">
-      <file file_name="main.c" />
-    </folder>
-    <folder Name="System">
-      <file file_name="$(ProjectDir)/../../nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../../nRF/System/cpu.c" />
-    </folder>
-  </project>
+  <import file_name="dotbot-firmware/bsp/bsp.emProject" />
+  <import file_name="dotbot-firmware/drv/drv.emProject" />
+  <import file_name="applications.emProject" />
 </solution>
