@@ -23,9 +23,6 @@ jobs:
           submodules: 'true'
       - name: Build projects
         run: BUILD_TARGET=${{ matrix.target }} BUILD_CONFIG=${{ matrix.config }} make docker
-      - name: Build for release and convert elf artifacts to hex
-        if: matrix.config == 'Release'
-        run: BUILD_TARGET=${{ matrix.target }} DOCKER_TARGETS="artifacts" BUILD_CONFIG=${{ matrix.config }} make docker
 
   style:
     runs-on: ubuntu-latest
