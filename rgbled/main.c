@@ -26,7 +26,7 @@ void swarmit_reload_wdt0(void);
 //=========================== variables ========================================
 
 static const db_rgbled_pwm_conf_t rgbled_pwm_conf = {
-    .pwm  = 1,
+    .pwm = 1,
     .pins = {
         { .port = DB_RGB_LED_PWM_RED_PORT, .pin = DB_RGB_LED_PWM_RED_PIN },
         { .port = DB_RGB_LED_PWM_GREEN_PORT, .pin = DB_RGB_LED_PWM_GREEN_PIN },
