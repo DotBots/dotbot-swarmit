@@ -1,4 +1,7 @@
-#Segger Studio specific files
+# Allow cmse_implib.a
+!cmse_implib.a
+
+# Segger Studio specific files
 *.emSession
 *.jlink
 *.ind
