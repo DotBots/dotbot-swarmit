@@ -15,7 +15,7 @@
 
 //=========================== swarmit ==========================================
 
-void swarmit_reload_wdt0(void);
+void swarmit_keep_alive(void);
 
 //=========================== defines ==========================================
 
@@ -29,7 +29,7 @@ static const gpio_t led2 = { .port = DB_LED2_PORT, .pin = DB_LED2_PIN };
 //=========================== callbacks ========================================
 
 static void _leds_callback(void) {
-    swarmit_reload_wdt0();
+    swarmit_keep_alive();
     db_gpio_toggle(&led1);
     db_gpio_toggle(&led2);
 }

@@ -55,10 +55,14 @@
 #endif
 
 typedef struct {
+    uint32_t x;  ///< X coordinate, multiplied by 1e6
+    uint32_t y;  ///< Y coordinate, multiplied by 1e6
+} position_2d_t;
+
+typedef struct {
     uint32_t ts_last_packet_received;           ///< Last timestamp in microseconds a control packet was received
-    db_lh2_t lh2;                               ///< LH2 device descriptor
     uint8_t radio_buffer[DB_BUFFER_MAX_BYTES];  ///< Internal buffer that contains the command to send (from buttons)
-    protocol_lh2_location_t last_location;      ///< Last computed LH2 location received
+    position_2d_t last_position;                ///< Last computed LH2 location received
     int16_t direction;                          ///< Current direction of the DotBot (angle in °)
     protocol_control_mode_t control_mode;       ///< Remote control mode
     protocol_lh2_waypoints_t waypoints;         ///< List of waypoints
@@ -66,7 +70,7 @@ typedef struct {
     uint8_t next_waypoint_idx;                  ///< Index of next waypoint to reach
     bool update_control_loop;                   ///< Whether the control loop need an update
     bool advertize;                             ///< Whether an advertize packet should be sent
-    bool update_lh2;                            ///< Whether LH2 data must be processed
+    bool update_position;                       ///< Whether position must be updated
     uint64_t device_id;                         ///< Device ID of the DotBot
 } dotbot_vars_t;
 
@@ -75,16 +79,15 @@ typedef struct {
 typedef void (*ipc_isr_cb_t)(const uint8_t *, size_t);
 
 // Swarmit NSC callbable functions
-void swarmit_reload_wdt0(void);
+void swarmit_keep_alive(void);
 
 void swarmit_send_raw_data(const uint8_t *packet, uint8_t length);
 void swarmit_ipc_isr(ipc_isr_cb_t cb);
 
-void swarmit_lh2_init(void);
-void swarmit_lh2_start(void);
-void swarmit_lh2_stop(void);
-void swarmit_lh2_process_location(db_lh2_t *lh2);
-void swarmit_lh2_spim_isr(void);
+void swarmit_localization_init(void);
+void swarmit_localization_process_data(void);
+void swarmit_localization_get_position(position_2d_t *position);
+void swarmit_localization_handle_isr(void);
 
 //=========================== variables ========================================
 
@@ -107,7 +110,7 @@ static void _timeout_check(void);
 static void _advertise(void);
 static void _compute_angle(const protocol_lh2_location_t *next, const protocol_lh2_location_t *origin, int16_t *angle);
 static void _update_control_loop(void);
-static void _update_lh2(void);
+static void _position_update(void);
 
 //=========================== callbacks ========================================
 
@@ -141,19 +144,6 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
         {
             protocol_rgbled_command_t *command = (protocol_rgbled_command_t *)cmd_ptr;
             db_rgbled_pwm_set_color(command->r, command->g, command->b);
-        } break;
-        case DB_PROTOCOL_LH2_LOCATION:
-        {
-            const protocol_lh2_location_t *location = (const protocol_lh2_location_t *)cmd_ptr;
-            int16_t angle = -1000;
-            _compute_angle(location, &_dotbot_vars.last_location, &angle);
-            if (angle != DB_DIRECTION_INVALID) {
-                _dotbot_vars.last_location.x = location->x;
-                _dotbot_vars.last_location.y = location->y;
-                _dotbot_vars.last_location.z = location->z;
-                _dotbot_vars.direction = angle;
-            }
-            _dotbot_vars.update_control_loop = (_dotbot_vars.control_mode == ControlAuto);
         } break;
         case DB_PROTOCOL_CONTROL_MODE:
             db_motors_set_speed(0, 0);
@@ -190,50 +180,55 @@ int main(void) {
     _dotbot_vars.direction = DB_DIRECTION_INVALID;
     _dotbot_vars.update_control_loop = false;
     _dotbot_vars.advertize = false;
-    _dotbot_vars.update_lh2 = false;
+    _dotbot_vars.update_position = false;
 
     // Retrieve the device id once at startup
     _dotbot_vars.device_id = db_device_id();
 
     db_timer_init(TIMER_DEV);
     db_timer_set_periodic_ms(TIMER_DEV, 0, DB_TIMEOUT_CHECK_DELAY_MS, &_timeout_check);
-    db_timer_set_periodic_ms(TIMER_DEV, 1, DB_LH2_UPDATE_DELAY_MS, &_update_lh2);
+    db_timer_set_periodic_ms(TIMER_DEV, 1, DB_LH2_UPDATE_DELAY_MS, &_position_update);
     db_timer_set_periodic_ms(TIMER_DEV, 2, DB_ADVERTIZEMENT_DELAY_MS, &_advertise);
-    swarmit_lh2_init();
+    swarmit_localization_init();
 
     while (1) {
         __WFE();
 
-        // Process available lighthouse data
-        swarmit_lh2_process_location(&_dotbot_vars.lh2);
+        // Process any available lighthouse data
+        swarmit_localization_process_data();
 
-        if (_dotbot_vars.update_lh2) {
-            // Check if data is ready to send
-            if (_dotbot_vars.lh2.data_ready[0][0] == DB_LH2_PROCESSED_DATA_AVAILABLE && _dotbot_vars.lh2.data_ready[1][0] == DB_LH2_PROCESSED_DATA_AVAILABLE) {
+        if (_dotbot_vars.update_position) {
+            position_2d_t current_position = { 0 };
+            swarmit_localization_get_position(&current_position);
 
-                swarmit_lh2_stop();
-                // Prepare the radio buffer
-                size_t header_length = db_protocol_header_to_buffer(_dotbot_vars.radio_buffer, DB_BROADCAST_ADDRESS);
-                _dotbot_vars.radio_buffer[header_length] = DB_PROTOCOL_DOTBOT_DATA;
-                memcpy(_dotbot_vars.radio_buffer + header_length + sizeof(uint8_t), &_dotbot_vars.direction, sizeof(int16_t));
-                _dotbot_vars.radio_buffer[header_length + sizeof(uint8_t) + sizeof(int16_t)] = LH2_SWEEP_COUNT;
-                // Add the LH2 sweep
-                for (uint8_t lh2_sweep_index = 0; lh2_sweep_index < LH2_SWEEP_COUNT; lh2_sweep_index++) {
-                    memcpy(
-                        _dotbot_vars.radio_buffer + sizeof(protocol_header_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(int16_t) + lh2_sweep_index * sizeof(db_lh2_raw_data_t),
-                        &_dotbot_vars.lh2.raw_data[lh2_sweep_index][0],
-                        sizeof(db_lh2_raw_data_t));
-                    // Mark the data as already sent
-                    _dotbot_vars.lh2.data_ready[lh2_sweep_index][0] = DB_LH2_NO_NEW_DATA;
-                }
-                size_t length = sizeof(protocol_header_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(int16_t) + sizeof(db_lh2_raw_data_t) * LH2_SWEEP_COUNT;
-
-                // Send the radio packet
-                swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
-
-                swarmit_lh2_start();
+            int16_t angle = -1000;
+            protocol_lh2_location_t last_location = {
+                .x = _dotbot_vars.last_position.x,
+                .y = _dotbot_vars.last_position.y,
+                .z = 0
+            };
+            protocol_lh2_location_t current_location = {
+                .x = current_position.x,
+                .y = current_position.y,
+                .z = 0
+            };
+            _compute_angle(&current_location, &last_location, &angle);
+            if (angle != DB_DIRECTION_INVALID) {
+                _dotbot_vars.last_position.x = current_location.x;
+                _dotbot_vars.last_position.y = current_location.y;
+                _dotbot_vars.direction = angle;
             }
-            _dotbot_vars.update_lh2 = false;
+            _dotbot_vars.update_control_loop = (_dotbot_vars.control_mode == ControlAuto);
+
+            size_t length = db_protocol_header_to_buffer(_dotbot_vars.radio_buffer, DB_GATEWAY_ADDRESS);
+            _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_DATA;
+            memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.direction, sizeof(int16_t));
+            length += sizeof(int16_t);
+            memcpy(&_dotbot_vars.radio_buffer[length], &current_location, sizeof(protocol_lh2_location_t));
+            length += sizeof(protocol_lh2_location_t);
+            swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
+
+            _dotbot_vars.update_position = false;
         }
 
         if (_dotbot_vars.update_control_loop) {
@@ -242,7 +237,7 @@ int main(void) {
         }
 
         if (_dotbot_vars.advertize) {
-            size_t length = db_protocol_advertizement_to_buffer(_dotbot_vars.radio_buffer, DB_BROADCAST_ADDRESS, DotBot);
+            size_t length = db_protocol_advertizement_to_buffer(_dotbot_vars.radio_buffer, DB_BROADCAST_ADDRESS, DotBot, true);
             swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
             _dotbot_vars.advertize = false;
         }
@@ -256,8 +251,8 @@ static void _update_control_loop(void) {
         db_motors_set_speed(0, 0);
         return;
     }
-    float dx = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].x - (float)_dotbot_vars.last_location.x) / 1e6;
-    float dy = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].y - (float)_dotbot_vars.last_location.y) / 1e6;
+    float dx = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].x - (float)_dotbot_vars.last_position.x) / 1e6;
+    float dy = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].y - (float)_dotbot_vars.last_position.y) / 1e6;
     float distanceToTarget = sqrtf(powf(dx, 2) + powf(dy, 2));
 
     float speedReductionFactor = 1.0;  // No reduction by default
@@ -280,7 +275,12 @@ static void _update_control_loop(void) {
         right_speed = (int16_t)DB_MAX_SPEED * speedReductionFactor;
     } else {
         // compute angle to target waypoint
-        _compute_angle(&_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx], &_dotbot_vars.last_location, &angle_to_target);
+        protocol_lh2_location_t last_location = {
+            .x = _dotbot_vars.last_position.x,
+            .y = _dotbot_vars.last_position.y,
+            .z = 0
+        };
+        _compute_angle(&_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx], &last_location, &angle_to_target);
         error_angle = angle_to_target - _dotbot_vars.direction;
         if (error_angle < -180) {
             error_angle += 360;
@@ -328,13 +328,13 @@ static void _timeout_check(void) {
 }
 
 static void _advertise(void) {
-    swarmit_reload_wdt0();
+    swarmit_keep_alive();
     db_gpio_toggle(&db_led1);
     _dotbot_vars.advertize = true;
 }
 
-static void _update_lh2(void) {
-    _dotbot_vars.update_lh2 = true;
+static void _position_update(void) {
+    _dotbot_vars.update_position = true;
 }
 
 void IPC_IRQHandler(void) {
@@ -342,5 +342,5 @@ void IPC_IRQHandler(void) {
 }
 
 void SPIM_IRQ_HANDLER(void) {
-    swarmit_lh2_spim_isr();
+    swarmit_localization_handle_isr();
 }
