@@ -4,12 +4,17 @@ PACKAGES_DIR_OPT ?=
 SEGGER_DIR ?= /opt/segger
 BUILD_CONFIG ?= Release
 BUILD_TARGET ?= dotbot-v3
-PROJECTS ?= dotbot motors move rgbled timer
+PROJECTS ?= dotbot dotbot-simple motors move rgbled timer
 
 .PHONY: $(PROJECTS)
 all: $(PROJECTS)
 
 dotbot:
+	@echo "\e[1mBuilding $@ application\e[0m"
+	"$(SEGGER_DIR)/bin/emBuild" swarmit-$(BUILD_TARGET).emProject -project $@ -config $(BUILD_CONFIG) $(PACKAGES_DIR_OPT) -rebuild -verbose
+	@echo "\e[1mDone\e[0m\n"
+
+dotbot-simple:
 	@echo "\e[1mBuilding $@ application\e[0m"
 	"$(SEGGER_DIR)/bin/emBuild" swarmit-$(BUILD_TARGET).emProject -project $@ -config $(BUILD_CONFIG) $(PACKAGES_DIR_OPT) -rebuild -verbose
 	@echo "\e[1mDone\e[0m\n"
