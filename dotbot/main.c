@@ -84,7 +84,6 @@ void swarmit_keep_alive(void);
 void swarmit_send_raw_data(const uint8_t *packet, uint8_t length);
 void swarmit_ipc_isr(ipc_isr_cb_t cb);
 
-void swarmit_localization_init(void);
 void swarmit_localization_process_data(void);
 void swarmit_localization_get_position(position_2d_t *position);
 void swarmit_localization_handle_isr(void);
@@ -189,7 +188,6 @@ int main(void) {
     db_timer_set_periodic_ms(TIMER_DEV, 0, DB_TIMEOUT_CHECK_DELAY_MS, &_timeout_check);
     db_timer_set_periodic_ms(TIMER_DEV, 1, DB_LH2_UPDATE_DELAY_MS, &_position_update);
     db_timer_set_periodic_ms(TIMER_DEV, 2, DB_ADVERTIZEMENT_DELAY_MS, &_advertise);
-    swarmit_localization_init();
 
     while (1) {
         __WFE();
