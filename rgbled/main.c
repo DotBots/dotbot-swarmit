@@ -17,6 +17,7 @@
 //=========================== swarmit ==========================================
 
 void swarmit_keep_alive(void);
+void swarmit_localization_handle_isr(void);
 
 //=========================== defines ==========================================
 
@@ -59,4 +60,8 @@ int main(void) {
         db_rgbled_pwm_set_color(255, 0, 255);
         db_timer_delay_ms(TIMER_DEV, RGB_LED_DELAY_MS);
     }
+}
+
+void SPIM4_IRQHandler(void) {
+    swarmit_localization_handle_isr();
 }

@@ -17,13 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <stdio.h>
 // Include BSP headers
 #include "board.h"
 #include "board_config.h"
 #include "device.h"
 #include "gpio.h"
-#include "lh2.h"
 #include "protocol.h"
 #include "motors.h"
 #include "rgbled_pwm.h"
@@ -84,7 +82,6 @@ void swarmit_keep_alive(void);
 void swarmit_send_raw_data(const uint8_t *packet, uint8_t length);
 void swarmit_ipc_isr(ipc_isr_cb_t cb);
 
-void swarmit_localization_process_data(void);
 void swarmit_localization_get_position(position_2d_t *position);
 void swarmit_localization_handle_isr(void);
 
@@ -191,9 +188,6 @@ int main(void) {
 
     while (1) {
         __WFE();
-
-        // Process any available lighthouse data
-        swarmit_localization_process_data();
 
         if (_dotbot_vars.update_position) {
             position_2d_t current_position = { 0 };
@@ -339,6 +333,6 @@ void IPC_IRQHandler(void) {
     swarmit_ipc_isr(_rx_data_callback);
 }
 
-void SPIM_IRQ_HANDLER(void) {
+void SPIM4_IRQHandler(void) {
     swarmit_localization_handle_isr();
 }

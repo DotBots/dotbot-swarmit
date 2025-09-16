@@ -73,6 +73,7 @@ void swarmit_keep_alive(void);
 
 void swarmit_send_raw_data(const uint8_t *packet, uint8_t length);
 void swarmit_ipc_isr(ipc_isr_cb_t cb);
+void swarmit_localization_handle_isr(void);
 
 //=========================== variables ========================================
 
@@ -180,4 +181,8 @@ static void _advertise(void) {
 
 void IPC_IRQHandler(void) {
     swarmit_ipc_isr(_rx_data_callback);
+}
+
+void SPIM4_IRQHandler(void) {
+    swarmit_localization_handle_isr();
 }

@@ -17,6 +17,7 @@
 //=========================== swarmit ==========================================
 
 void swarmit_keep_alive(void);
+void swarmit_localization_handle_isr(void);
 
 //=========================== main =============================================
 
@@ -40,4 +41,8 @@ int main(void) {
         db_gpio_toggle(&db_led1);
         db_timer_delay_ms(1, 250);
     }
+}
+
+void SPIM4_IRQHandler(void) {
+    swarmit_localization_handle_isr();
 }

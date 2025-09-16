@@ -18,6 +18,7 @@
 //=========================== swarmit ==========================================
 
 void swarmit_keep_alive(void);
+void swarmit_localization_handle_isr(void);
 
 //=========================== defines ==========================================
 
@@ -60,4 +61,8 @@ int main(void) {
         db_motors_set_speed(70, -70);
         db_timer_delay_ms(TIMER_DEV, 500);
     }
+}
+
+void SPIM4_IRQHandler(void) {
+    swarmit_localization_handle_isr();
 }

@@ -16,6 +16,7 @@
 //=========================== swarmit ==========================================
 
 void swarmit_keep_alive(void);
+void swarmit_localization_handle_isr(void);
 
 //=========================== defines ==========================================
 
@@ -46,4 +47,8 @@ int main(void) {
     while (1) {
         __WFE();
     }
+}
+
+void SPIM4_IRQHandler(void) {
+    swarmit_localization_handle_isr();
 }
