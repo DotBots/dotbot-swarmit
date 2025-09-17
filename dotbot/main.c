@@ -114,19 +114,7 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
     (void)len;
 
     _dotbot_vars.ts_last_packet_received = db_timer_ticks(TIMER_DEV);
-    uint8_t *ptk_ptr = (uint8_t *)pkt;
-    protocol_header_t *header = (protocol_header_t *)ptk_ptr;
-    // Check destination address matches
-    if (header->dst != DB_BROADCAST_ADDRESS && header->dst != _dotbot_vars.device_id) {
-        return;
-    }
-
-    // Check version is supported
-    if (header->version != DB_FIRMWARE_VERSION) {
-        return;
-    }
-
-    uint8_t *cmd_ptr = ptk_ptr + sizeof(protocol_header_t);
+    uint8_t *cmd_ptr = (uint8_t *)pkt;
     // parse received packet and update the motors' speeds
     switch ((uint8_t)*cmd_ptr++) {
         case DB_PROTOCOL_CMD_MOVE_RAW:
