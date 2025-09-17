@@ -35,7 +35,7 @@ int main(void) {
     db_timer_init(TIMER_DEV);
 
     db_timer_init(1);
-    db_timer_set_periodic_ms(1, 0, 500, &swarmit_keep_alive);
+    db_timer_set_periodic_ms(1, 0, 200, &swarmit_keep_alive);
 
     // Configure Motors
     db_motors_init();

@@ -15,9 +15,6 @@
 #include <nrf.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <stdio.h>
 // Include BSP headers
 #include "board.h"
 #include "board_config.h"
@@ -79,7 +76,7 @@ void swarmit_localization_handle_isr(void);
 
 static dotbot_vars_t _dotbot_vars;
 
-#ifdef DB_RGB_LED_PWM_RED_PORT  // Only available on DotBot v2
+#ifdef DB_RGB_LED_PWM_RED_PORT  // Only available on DotBot v2 and v3
 static const db_rgbled_pwm_conf_t rgbled_pwm_conf = {
     .pwm = 1,
     .pins = {
@@ -152,6 +149,7 @@ int main(void) {
     db_timer_init(TIMER_DEV);
     db_timer_set_periodic_ms(TIMER_DEV, 0, DB_TIMEOUT_CHECK_DELAY_MS, &_timeout_check);
     db_timer_set_periodic_ms(TIMER_DEV, 1, DB_ADVERTIZEMENT_DELAY_MS, &_advertise);
+    db_timer_set_periodic_ms(TIMER_DEV, 2, 200, &swarmit_keep_alive);
 
     while (1) {
         __WFE();
@@ -174,7 +172,6 @@ static void _timeout_check(void) {
 }
 
 static void _advertise(void) {
-    swarmit_keep_alive();
     db_gpio_toggle(&db_led1);
     _dotbot_vars.advertize = true;
 }

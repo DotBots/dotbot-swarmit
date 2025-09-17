@@ -32,7 +32,7 @@
 #define DB_RADIO_FREQ             (8U)      ///< Set the frequency to 2408 MHz
 #define RADIO_APP                 (DotBot)  ///< DotBot Radio App
 #define TIMER_DEV                 (0)
-#define DB_LH2_UPDATE_DELAY_MS    (100U)   ///< 100ms delay between each LH2 data refresh
+#define DB_LH2_UPDATE_DELAY_MS    (200U)   ///< 200ms delay between each LH2 position updates
 #define DB_ADVERTIZEMENT_DELAY_MS (500U)   ///< 500ms delay between each advertizement packet sending
 #define DB_TIMEOUT_CHECK_DELAY_MS (200U)   ///< 200ms delay between each timeout delay check
 #define TIMEOUT_CHECK_DELAY_TICKS (17000)  ///< ~500 ms delay between packet received timeout checks
@@ -185,6 +185,7 @@ int main(void) {
     db_timer_set_periodic_ms(TIMER_DEV, 0, DB_TIMEOUT_CHECK_DELAY_MS, &_timeout_check);
     db_timer_set_periodic_ms(TIMER_DEV, 1, DB_LH2_UPDATE_DELAY_MS, &_position_update);
     db_timer_set_periodic_ms(TIMER_DEV, 2, DB_ADVERTIZEMENT_DELAY_MS, &_advertise);
+    db_timer_set_periodic_ms(TIMER_DEV, 3, 100, &swarmit_keep_alive);
 
     while (1) {
         __WFE();
@@ -320,7 +321,6 @@ static void _timeout_check(void) {
 }
 
 static void _advertise(void) {
-    swarmit_keep_alive();
     db_gpio_toggle(&db_led1);
     _dotbot_vars.advertize = true;
 }

@@ -41,7 +41,7 @@ int main(void) {
     db_board_init();
 
     db_timer_init(TIMER_DEV);
-    db_timer_set_periodic_ms(TIMER_DEV, 0, 500, &swarmit_keep_alive);
+    db_timer_set_periodic_ms(TIMER_DEV, 0, 200, &swarmit_keep_alive);
 
     db_rgbled_pwm_init(&rgbled_pwm_conf);
 

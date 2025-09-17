@@ -23,7 +23,7 @@ void swarmit_localization_handle_isr(void);
 
 int main(void) {
     db_timer_init(1);
-    db_timer_set_periodic_ms(1, 0, 500, &swarmit_keep_alive);
+    db_timer_set_periodic_ms(1, 0, 200, &swarmit_keep_alive);
 
     db_gpio_init(&db_led1, DB_GPIO_OUT);
 
