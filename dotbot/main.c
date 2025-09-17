@@ -213,7 +213,7 @@ int main(void) {
             }
             _dotbot_vars.update_control_loop = (_dotbot_vars.control_mode == ControlAuto);
 
-            size_t length = db_protocol_header_to_buffer(_dotbot_vars.radio_buffer, DB_GATEWAY_ADDRESS);
+            size_t length = 0;
             _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_DATA;
             memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.direction, sizeof(int16_t));
             length += sizeof(int16_t);
@@ -230,7 +230,10 @@ int main(void) {
         }
 
         if (_dotbot_vars.advertize) {
-            size_t length = db_protocol_advertizement_to_buffer(_dotbot_vars.radio_buffer, DB_BROADCAST_ADDRESS, DotBot, true);
+            size_t length = 0;
+            _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_ADVERTISEMENT;
+            _dotbot_vars.radio_buffer[length++] = DotBot;
+            _dotbot_vars.radio_buffer[length++] = true;
             swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
             _dotbot_vars.advertize = false;
         }
