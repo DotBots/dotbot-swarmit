@@ -173,7 +173,6 @@ int main(void) {
     db_timer_set_periodic_ms(TIMER_DEV, 0, DB_TIMEOUT_CHECK_DELAY_MS, &_timeout_check);
     db_timer_set_periodic_ms(TIMER_DEV, 1, DB_LH2_UPDATE_DELAY_MS, &_position_update);
     db_timer_set_periodic_ms(TIMER_DEV, 2, DB_ADVERTIZEMENT_DELAY_MS, &_advertise);
-    db_timer_set_periodic_ms(TIMER_DEV, 3, 100, &swarmit_keep_alive);
 
     while (1) {
         __WFE();
@@ -317,6 +316,7 @@ static void _advertise(void) {
 }
 
 static void _position_update(void) {
+    swarmit_keep_alive(); // NOTE: this could be made faster, like update every 100 ms
     _dotbot_vars.update_position = true;
 }
 
