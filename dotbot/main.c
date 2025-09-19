@@ -316,7 +316,7 @@ static void _advertise(void) {
 }
 
 static void _position_update(void) {
-    swarmit_keep_alive(); // NOTE: this could be made faster, like update every 100 ms
+    swarmit_keep_alive();  // NOTE: this could be made faster, like update every 100 ms
     _dotbot_vars.update_position = true;
 }
 
