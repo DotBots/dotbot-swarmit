@@ -12,7 +12,7 @@
       <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
         <configuration Name="Common" file_type="Memory Map" />
       </file>
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/Scripts/nRF_Target.js">
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/Scripts/nRF_Target.js">
         <configuration Name="Common" file_type="Reset Script" />
       </file>
     </folder>
@@ -20,8 +20,8 @@
       <file file_name="main.c" />
     </folder>
     <folder Name="System">
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/cpu.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/$(Target)_system_init.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/cpu.c" />
     </folder>
   </project>
   <project Name="dotbot-simple">
@@ -36,7 +36,7 @@
       <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
         <configuration Name="Common" file_type="Memory Map" />
       </file>
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/Scripts/nRF_Target.js">
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/Scripts/nRF_Target.js">
         <configuration Name="Common" file_type="Reset Script" />
       </file>
     </folder>
@@ -44,8 +44,8 @@
       <file file_name="main.c" />
     </folder>
     <folder Name="System">
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/cpu.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/$(Target)_system_init.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/cpu.c" />
     </folder>
   </project>
   <project Name="motors">
@@ -60,7 +60,7 @@
       <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
         <configuration Name="Common" file_type="Memory Map" />
       </file>
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/Scripts/nRF_Target.js">
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/Scripts/nRF_Target.js">
         <configuration Name="Common" file_type="Reset Script" />
       </file>
     </folder>
@@ -68,8 +68,8 @@
       <file file_name="main.c" />
     </folder>
     <folder Name="System">
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/cpu.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/$(Target)_system_init.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/cpu.c" />
     </folder>
   </project>
   <project Name="move">
@@ -84,7 +84,7 @@
       <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
         <configuration Name="Common" file_type="Memory Map" />
       </file>
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/Scripts/nRF_Target.js">
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/Scripts/nRF_Target.js">
         <configuration Name="Common" file_type="Reset Script" />
       </file>
     </folder>
@@ -92,8 +92,8 @@
       <file file_name="main.c" />
     </folder>
     <folder Name="System">
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/cpu.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/$(Target)_system_init.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/cpu.c" />
     </folder>
   </project>
   <project Name="rgbled">
@@ -108,7 +108,7 @@
       <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
         <configuration Name="Common" file_type="Memory Map" />
       </file>
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/Scripts/nRF_Target.js">
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/Scripts/nRF_Target.js">
         <configuration Name="Common" file_type="Reset Script" />
       </file>
     </folder>
@@ -116,8 +116,8 @@
       <file file_name="main.c" />
     </folder>
     <folder Name="System">
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/cpu.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/$(Target)_system_init.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/cpu.c" />
     </folder>
   </project>
   <project Name="timer">
@@ -132,7 +132,7 @@
       <file file_name="$(ProjectDir)/../$(Target)_MemoryMap.xml">
         <configuration Name="Common" file_type="Memory Map" />
       </file>
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/Scripts/nRF_Target.js">
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/Scripts/nRF_Target.js">
         <configuration Name="Common" file_type="Reset Script" />
       </file>
     </folder>
@@ -140,8 +140,8 @@
       <file file_name="main.c" />
     </folder>
     <folder Name="System">
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/$(Target)_system_init.c" />
-      <file file_name="$(ProjectDir)/../dotbot-firmware/nRF/System/cpu.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/$(Target)_system_init.c" />
+      <file file_name="$(ProjectDir)/../dotbot-libs/nRF/System/cpu.c" />
     </folder>
   </project>
 </solution>

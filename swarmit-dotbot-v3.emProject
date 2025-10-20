@@ -29,7 +29,7 @@
     build_treat_warnings_as_errors="Yes"
     c_additional_options="-Wno-strict-prototypes"
     c_preprocessor_definitions="ARM_MATH_ARMV8MML;NRF5340_XXAA;NRF_APPLICATION;__NRF_FAMILY;CONFIG_NFCT_PINS_AS_GPIOS;FLASH_PLACEMENT=1;BOARD_DOTBOT_V3;OTA_USE_CRYPTO;NRF_TRUSTZONE_NONSECURE;USE_SWARMIT"
-    c_user_include_directories="$(SolutionDir)/dotbot-firmware/bsp;$(SolutionDir)/dotbot-firmware/crypto;$(SolutionDir)/dotbot-firmware/drv;$(PackagesDir)/nRF/Device/Include;$(PackagesDir)/CMSIS_5/CMSIS/Core/Include"
+    c_user_include_directories="$(SolutionDir)/dotbot-libs/bsp;$(SolutionDir)/dotbot-libs/crypto;$(SolutionDir)/dotbot-libs/drv;$(PackagesDir)/nRF/Device/Include;$(PackagesDir)/CMSIS_5/CMSIS/Core/Include"
     clang_machine_outliner="Yes"
     compiler_color_diagnostics="Yes"
     debug_register_definition_file="$(PackagesDir)/nRF/XML/nrf5340_application_Registers.xml"
@@ -52,7 +52,7 @@
     macros="BuildTarget=dotbot-v3;DeviceFamily=nRF;Target=nRF5340_xxAA_Application;Placement=Flash"
     project_type="Executable"
     target_reset_script="Reset();"
-    target_script_file="$(ProjectDir)/../dotbot-firmware/nRF/Scripts/nRF_Target.js"
+    target_script_file="$(ProjectDir)/../dotbot-libs/nRF/Scripts/nRF_Target.js"
     target_trace_initialize_script="EnableTrace(&quot;$(TraceInterfaceType)&quot;)" />
   <configuration
     Name="Debug"
@@ -66,7 +66,7 @@
     gcc_debugging_level="Level 2"
     gcc_omit_frame_pointer="Yes"
     gcc_optimization_level="Level 2 balanced" />
-  <import file_name="dotbot-firmware/bsp/bsp.emProject" />
-  <import file_name="dotbot-firmware/drv/drv.emProject" />
+  <import file_name="dotbot-libs/bsp/bsp.emProject" />
+  <import file_name="dotbot-libs/drv/drv.emProject" />
   <import file_name="applications.emProject" />
 </solution>

@@ -17,7 +17,7 @@ is a requirement of SwarmIT.
 
 ### Get the code
 
-dobtot-swarmit depends on the [DotBot-firmware](https://github.com/DotBots/DotBot-firmware)
+dobtot-swarmit depends on the [DotBot-libs](https://github.com/DotBots/DotBot-libs)
 repository. It is included in the codebase as a [Git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
 
 Use the following command to clone the SwarmIT codebase locally:
@@ -40,8 +40,6 @@ After building, for example if you want to run the move application, you will fi
  `<application directory>/Output/dotbot-v3/Debug/Exe/move-dotbot-v3.bin`
  
 that you can use to flash using [SwarmIT](https://github.com/DotBots/swarmit?tab=readme-ov-file#usage).
-
-You can also write new applications following the DotBot API: https://dotbot-firmware.readthedocs.io/en/rel-1.13.1/api.html
 
 ## License
 
