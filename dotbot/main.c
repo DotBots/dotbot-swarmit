@@ -29,17 +29,17 @@
 
 //=========================== defines ==========================================
 
-#define DB_RADIO_FREQ             (8U)      ///< Set the frequency to 2408 MHz
-#define RADIO_APP                 (DotBot)  ///< DotBot Radio App
-#define TIMER_DEV                 (0)
-#define DB_LH2_UPDATE_DELAY_MS    (200U)   ///< 200ms delay between each LH2 position updates
-#define DB_ADVERTIZEMENT_DELAY_MS (500U)   ///< 500ms delay between each advertizement packet sending
-#define DB_TIMEOUT_CHECK_DELAY_MS (200U)   ///< 200ms delay between each timeout delay check
-#define TIMEOUT_CHECK_DELAY_TICKS (17000)  ///< ~500 ms delay between packet received timeout checks
-#define DB_BUFFER_MAX_BYTES       (255U)   ///< Max bytes in UART receive buffer
-#define DB_DIRECTION_THRESHOLD    (0.01)   ///< Threshold to update the direction
-#define DB_DIRECTION_INVALID      (-1000)  ///< Invalid angle e.g out of [0, 360] range
-#define DB_MAX_SPEED              (60)     ///< Max speed in autonomous control mode
+#define DB_RADIO_FREQ               (8U)      ///< Set the frequency to 2408 MHz
+#define RADIO_APP                   (DotBot)  ///< DotBot Radio App
+#define TIMER_DEV                   (0)
+#define DB_POSITION_UPDATE_DELAY_MS (200U)   ///< 200ms delay between each LH2 position updates
+#define DB_ADVERTIZEMENT_DELAY_MS   (500U)   ///< 500ms delay between each advertizement packet sending
+#define DB_TIMEOUT_CHECK_DELAY_MS   (200U)   ///< 200ms delay between each timeout delay check
+#define TIMEOUT_CHECK_DELAY_TICKS   (17000)  ///< ~500 ms delay between packet received timeout checks
+#define DB_BUFFER_MAX_BYTES         (255U)   ///< Max bytes in UART receive buffer
+#define DB_DIRECTION_THRESHOLD      (0.01)   ///< Threshold to update the direction
+#define DB_DIRECTION_INVALID        (-1000)  ///< Invalid angle e.g out of [0, 360] range
+#define DB_MAX_SPEED                (60)     ///< Max speed in autonomous control mode
 #if defined(BOARD_DOTBOT_V2)
 #define DB_REDUCE_SPEED_FACTOR  (0.7)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_ANGLE   (25)   ///< Max angle amplitude where speed reduction factor is applied
@@ -171,7 +171,7 @@ int main(void) {
 
     db_timer_init(TIMER_DEV);
     db_timer_set_periodic_ms(TIMER_DEV, 0, DB_TIMEOUT_CHECK_DELAY_MS, &_timeout_check);
-    db_timer_set_periodic_ms(TIMER_DEV, 1, DB_LH2_UPDATE_DELAY_MS, &_position_update);
+    db_timer_set_periodic_ms(TIMER_DEV, 1, DB_POSITION_UPDATE_DELAY_MS, &_position_update);
     db_timer_set_periodic_ms(TIMER_DEV, 2, DB_ADVERTIZEMENT_DELAY_MS, &_advertise);
 
     while (1) {
