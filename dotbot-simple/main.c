@@ -146,7 +146,6 @@ int main(void) {
             size_t length = 0;
             _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_ADVERTISEMENT;
             _dotbot_vars.radio_buffer[length++] = DotBot;
-            _dotbot_vars.radio_buffer[length++] = true;
             swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
             _dotbot_vars.advertize = false;
         }
