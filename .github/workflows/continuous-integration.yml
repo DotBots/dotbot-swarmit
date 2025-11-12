@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ["dotbot-v2", "dotbot-v3"]
+        target: ["dotbot-v2", "dotbot-v3", "nrf5340dk"]
         config: ["Debug", "Release"]
     steps:
       - name: Checkout repo
