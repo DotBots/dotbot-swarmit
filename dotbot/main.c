@@ -32,8 +32,8 @@
 #define DB_RADIO_FREQ               (8U)      ///< Set the frequency to 2408 MHz
 #define RADIO_APP                   (DotBot)  ///< DotBot Radio App
 #define TIMER_DEV                   (0)
-#define DB_POSITION_UPDATE_DELAY_MS (200U)   ///< 200ms delay between each LH2 position updates
-#define DB_ADVERTIZEMENT_DELAY_MS   (500U)   ///< 500ms delay between each advertizement packet sending
+#define DB_POSITION_UPDATE_DELAY_MS (100U)   ///< 100ms delay between each LH2 position updates
+#define DB_ADVERTIZEMENT_DELAY_MS   (500U)   ///< 500ms delay between each advertisement packet sending
 #define DB_TIMEOUT_CHECK_DELAY_MS   (200U)   ///< 200ms delay between each timeout delay check
 #define TIMEOUT_CHECK_DELAY_TICKS   (17000)  ///< ~500 ms delay between packet received timeout checks
 #define DB_BUFFER_MAX_BYTES         (255U)   ///< Max bytes in UART receive buffer
@@ -41,7 +41,7 @@
 #define DB_DIRECTION_INVALID        (-1000)  ///< Invalid angle e.g out of [0, 360] range
 #define DB_MAX_SPEED                (60)     ///< Max speed in autonomous control mode
 #if defined(BOARD_DOTBOT_V2)
-#define DB_REDUCE_SPEED_FACTOR  (0.7)  ///< Reduction factor applied to speed when close to target or error angle is too large
+#define DB_REDUCE_SPEED_FACTOR  (0.8)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_ANGLE   (25)   ///< Max angle amplitude where speed reduction factor is applied
 #define DB_ANGULAR_SPEED_FACTOR (35)   ///< Constant applied to the normalized angle to target error
 #define DB_ANGULAR_SIDE_FACTOR  (-1)   ///< Angular side factor
@@ -64,6 +64,7 @@ typedef struct {
     int16_t direction;                          ///< Current direction of the DotBot (angle in °)
     protocol_control_mode_t control_mode;       ///< Remote control mode
     protocol_lh2_waypoints_t waypoints;         ///< List of waypoints
+    protocol_lh2_location_t current_location;   ///< Current LH2 location
     uint32_t waypoints_threshold;               ///< Distance to target waypoint threshold
     uint8_t next_waypoint_idx;                  ///< Index of next waypoint to reach
     bool update_control_loop;                   ///< Whether the control loop need an update
@@ -83,6 +84,7 @@ void swarmit_send_raw_data(const uint8_t *packet, uint8_t length);
 void swarmit_ipc_isr(ipc_isr_cb_t cb);
 
 void swarmit_localization_get_position(position_2d_t *position);
+void swarmit_get_battery_level(uint16_t *battery_level);
 void swarmit_localization_handle_isr(void);
 
 //=========================== variables ========================================
@@ -178,6 +180,7 @@ int main(void) {
         __WFE();
 
         if (_dotbot_vars.update_position) {
+            swarmit_keep_alive();
             position_2d_t current_position = { 0 };
             swarmit_localization_get_position(&current_position);
 
@@ -187,26 +190,15 @@ int main(void) {
                 .y = _dotbot_vars.last_position.y,
                 .z = 0
             };
-            protocol_lh2_location_t current_location = {
-                .x = current_position.x,
-                .y = current_position.y,
-                .z = 0
-            };
-            _compute_angle(&current_location, &last_location, &angle);
+            _dotbot_vars.current_location.x = current_position.x;
+            _dotbot_vars.current_location.y = current_position.y;
+            _compute_angle(&_dotbot_vars.current_location, &last_location, &angle);
             if (angle != DB_DIRECTION_INVALID) {
-                _dotbot_vars.last_position.x = current_location.x;
-                _dotbot_vars.last_position.y = current_location.y;
+                _dotbot_vars.last_position.x = _dotbot_vars.current_location.x;
+                _dotbot_vars.last_position.y = _dotbot_vars.current_location.y;
                 _dotbot_vars.direction = angle;
             }
             _dotbot_vars.update_control_loop = (_dotbot_vars.control_mode == ControlAuto);
-
-            size_t length = 0;
-            _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_DATA;
-            memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.direction, sizeof(int16_t));
-            length += sizeof(int16_t);
-            memcpy(&_dotbot_vars.radio_buffer[length], &current_location, sizeof(protocol_lh2_location_t));
-            length += sizeof(protocol_lh2_location_t);
-            swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
 
             _dotbot_vars.update_position = false;
         }
@@ -221,6 +213,14 @@ int main(void) {
             _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_ADVERTISEMENT;
             _dotbot_vars.radio_buffer[length++] = DotBot;
             _dotbot_vars.radio_buffer[length++] = true;
+            memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.direction, sizeof(int16_t));
+            length += sizeof(int16_t);
+            memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.current_location, sizeof(protocol_lh2_location_t));
+            length += sizeof(protocol_lh2_location_t);
+            uint16_t battery_level = 0;
+            swarmit_get_battery_level(&battery_level);
+            memcpy(&_dotbot_vars.radio_buffer[length], &battery_level, sizeof(uint16_t));
+            length += sizeof(uint16_t);
             swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
             _dotbot_vars.advertize = false;
         }
@@ -316,7 +316,6 @@ static void _advertise(void) {
 }
 
 static void _position_update(void) {
-    swarmit_keep_alive();  // NOTE: this could be made faster, like update every 100 ms
     _dotbot_vars.update_position = true;
 }
 
