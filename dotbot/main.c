@@ -39,7 +39,7 @@
 #define DB_BUFFER_MAX_BYTES         (255U)   ///< Max bytes in UART receive buffer
 #define DB_DIRECTION_THRESHOLD      (0.01)   ///< Threshold to update the direction
 #define DB_DIRECTION_INVALID        (-1000)  ///< Invalid angle e.g out of [0, 360] range
-#define DB_MAX_SPEED                (60)     ///< Max speed in autonomous control mode
+#define DB_MAX_SPEED                (70)     ///< Max speed in autonomous control mode
 #if defined(BOARD_DOTBOT_V2)
 #define DB_REDUCE_SPEED_FACTOR  (0.8)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_ANGLE   (25)   ///< Max angle amplitude where speed reduction factor is applied
@@ -210,8 +210,7 @@ int main(void) {
 
         if (_dotbot_vars.advertize) {
             size_t length = 0;
-            _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_ADVERTISEMENT;
-            _dotbot_vars.radio_buffer[length++] = DotBot;
+            _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_ADVERTISEMENT;
             _dotbot_vars.radio_buffer[length++] = true;
             memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.direction, sizeof(int16_t));
             length += sizeof(int16_t);
