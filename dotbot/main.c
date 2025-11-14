@@ -210,8 +210,7 @@ int main(void) {
 
         if (_dotbot_vars.advertize) {
             size_t length = 0;
-            _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_ADVERTISEMENT;
-            _dotbot_vars.radio_buffer[length++] = DotBot;
+            _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_ADVERTISEMENT;
             _dotbot_vars.radio_buffer[length++] = true;
             memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.direction, sizeof(int16_t));
             length += sizeof(int16_t);
