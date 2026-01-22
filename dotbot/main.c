@@ -37,7 +37,7 @@
 #define DB_TIMEOUT_CHECK_DELAY_MS   (200U)   ///< 200ms delay between each timeout delay check
 #define TIMEOUT_CHECK_DELAY_TICKS   (17000)  ///< ~500 ms delay between packet received timeout checks
 #define DB_BUFFER_MAX_BYTES         (255U)   ///< Max bytes in UART receive buffer
-#define DB_DIRECTION_THRESHOLD      (0.01)   ///< Threshold to update the direction
+#define DB_DIRECTION_THRESHOLD      (50)     ///< Threshold to update the direction in mm
 #define DB_DIRECTION_INVALID        (-1000)  ///< Invalid angle e.g out of [0, 360] range
 #define DB_MAX_SPEED                (70)     ///< Max speed in autonomous control mode
 #if defined(BOARD_DOTBOT_V2)
@@ -53,8 +53,8 @@
 #endif
 
 typedef struct {
-    uint32_t x;  ///< X coordinate, multiplied by 1e6
-    uint32_t y;  ///< Y coordinate, multiplied by 1e6
+    uint32_t x;  ///< X coordinate in mm
+    uint32_t y;  ///< Y coordinate in mm
 } position_2d_t;
 
 typedef struct {
@@ -233,13 +233,13 @@ static void _update_control_loop(void) {
         db_motors_set_speed(0, 0);
         return;
     }
-    float dx = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].x - (float)_dotbot_vars.last_position.x) / 1e6;
-    float dy = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].y - (float)_dotbot_vars.last_position.y) / 1e6;
+    float dx = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].x - (float)_dotbot_vars.last_position.x);
+    float dy = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].y - (float)_dotbot_vars.last_position.y);
     float distanceToTarget = sqrtf(powf(dx, 2) + powf(dy, 2));
 
     float speedReductionFactor = 1.0;  // No reduction by default
 
-    if ((uint32_t)(distanceToTarget * 1e6) < _dotbot_vars.waypoints_threshold * 2) {
+    if ((uint32_t)(distanceToTarget) < _dotbot_vars.waypoints_threshold * 2) {
         speedReductionFactor = DB_REDUCE_SPEED_FACTOR;
     }
 
@@ -248,7 +248,7 @@ static void _update_control_loop(void) {
     int16_t angular_speed = 0;
     int16_t angle_to_target = 0;
     int16_t error_angle = 0;
-    if ((uint32_t)(distanceToTarget * 1e6) < _dotbot_vars.waypoints_threshold) {
+    if ((uint32_t)(distanceToTarget) < _dotbot_vars.waypoints_threshold) {
         // Target waypoint is reached
         _dotbot_vars.next_waypoint_idx++;
     } else if (_dotbot_vars.direction == DB_DIRECTION_INVALID) {
@@ -292,8 +292,8 @@ static void _update_control_loop(void) {
 }
 
 static void _compute_angle(const protocol_lh2_location_t *next, const protocol_lh2_location_t *origin, int16_t *angle) {
-    float dx = ((float)next->x - (float)origin->x) / 1e6;
-    float dy = ((float)next->y - (float)origin->y) / 1e6;
+    float dx = ((float)next->x - (float)origin->x);
+    float dy = ((float)next->y - (float)origin->y);
     float distance = sqrtf(powf(dx, 2) + powf(dy, 2));
 
     if (distance < DB_DIRECTION_THRESHOLD) {
