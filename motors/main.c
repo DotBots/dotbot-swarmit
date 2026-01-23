@@ -10,15 +10,26 @@
 
 #include <nrf.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "board.h"
+#include "board_config.h"
 #include "motors.h"
 #include "timer.h"
+#include "gpio.h"
 
 //=========================== swarmit ==========================================
 
 void swarmit_keep_alive(void);
 void swarmit_localization_handle_isr(void);
+
+static bool keep_alive_enabled = true;
+
+void app_swarmit_keep_alive(void) {
+    if (keep_alive_enabled) {
+        swarmit_keep_alive();
+    }
+}
 
 //=========================== defines ==========================================
 
@@ -31,36 +42,45 @@ int main(void) {
     // Turn ON the DotBot board regulator
     db_board_init();
 
+    db_gpio_init(&db_led1, DB_GPIO_OUT);
+    db_gpio_set(&db_led1);
+
     // Initialize the timer
     db_timer_init(TIMER_DEV);
 
     db_timer_init(1);
-    db_timer_set_periodic_ms(1, 0, 200, &swarmit_keep_alive);
+    keep_alive_enabled = true;
+    db_timer_set_periodic_ms(1, 0, 200, &app_swarmit_keep_alive);
 
     // Configure Motors
     db_motors_init();
 
-    while (1) {
-        // Move forward
-        for (uint8_t speed = 50; speed < 80; speed++) {
-            db_motors_set_speed(speed, speed);
-            db_timer_delay_ms(TIMER_DEV, 30);
-        }
+    // Spin
+    db_motors_set_speed(-70, 70);
+    db_timer_delay_ms(TIMER_DEV, 3000);
 
-        // Move backward
-        for (uint8_t speed = 50; speed < 80; speed++) {
-            db_motors_set_speed(speed * -1, speed * -1);
-            db_timer_delay_ms(TIMER_DEV, 30);
-        }
+    // Stop
+    db_motors_set_speed(0, 0);
+    db_timer_delay_ms(TIMER_DEV, 1000);
 
-        // Spin
-        db_motors_set_speed(-70, 70);
-        db_timer_delay_ms(TIMER_DEV, 500);
+    // Spin back
+    db_motors_set_speed(70, -70);
+    db_timer_delay_ms(TIMER_DEV, 3000);
 
-        // Spin back
-        db_motors_set_speed(70, -70);
-        db_timer_delay_ms(TIMER_DEV, 500);
+    // Stop
+    db_motors_set_speed(0, 0);
+
+    // Blink for 3 seconds
+    for (int i = 0; i < 12; i++) {
+        db_gpio_toggle(&db_led1);
+        db_timer_delay_ms(1, 250);
     }
+    db_gpio_clear(&db_led1);
+
+    // stop the keep alive, which will cause the robot to reboot
+    keep_alive_enabled = false;
+
+    while (1) {}
 }
 
 void SPIM4_IRQHandler(void) {
