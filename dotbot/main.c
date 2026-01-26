@@ -138,8 +138,11 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
         {
             db_motors_set_speed(0, 0);
             _dotbot_vars.control_mode = ControlManual;
-            _dotbot_vars.waypoints_threshold = (uint32_t)((uint8_t)*cmd_ptr++ * 1000);
-            _dotbot_vars.waypoints.length = (uint8_t)*cmd_ptr++;
+            uint16_t threshold        = 0;
+            memcpy(&threshold, cmd_ptr, sizeof(uint16_t));
+            cmd_ptr += sizeof(uint16_t);
+            _dotbot_vars.waypoints_threshold = (uint32_t)threshold;
+            _dotbot_vars.waypoints.length    = (uint8_t)*cmd_ptr++;
             memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, _dotbot_vars.waypoints.length * sizeof(protocol_lh2_location_t));
             _dotbot_vars.next_waypoint_idx = 0;
             if (_dotbot_vars.waypoints.length > 0) {
@@ -309,7 +312,7 @@ static void _compute_angle(const protocol_lh2_location_t *next, const protocol_l
 
 static void _timeout_check(void) {
     uint32_t ticks = db_timer_ticks(TIMER_DEV);
-    if (ticks > _dotbot_vars.ts_last_packet_received + TIMEOUT_CHECK_DELAY_TICKS) {
+    if (_dotbot_vars.control_mode != ControlAuto && ticks > _dotbot_vars.ts_last_packet_received + TIMEOUT_CHECK_DELAY_TICKS) {
         db_motors_set_speed(0, 0);
     }
 }
