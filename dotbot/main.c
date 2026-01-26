@@ -39,13 +39,20 @@
 #define DB_BUFFER_MAX_BYTES         (255U)   ///< Max bytes in UART receive buffer
 #define DB_DIRECTION_THRESHOLD      (50)     ///< Threshold to update the direction in mm
 #define DB_DIRECTION_INVALID        (-1000)  ///< Invalid angle e.g out of [0, 360] range
-#define DB_MAX_SPEED                (70)     ///< Max speed in autonomous control mode
-#if defined(BOARD_DOTBOT_V2)
+#if defined(BOARD_DOTBOT_V3)
+#define DB_MAX_SPEED            (60)   ///< Max speed in autonomous control mode
+#define DB_REDUCE_SPEED_FACTOR  (0.7)  ///< Reduction factor applied to speed when close to target or error angle is too large
+#define DB_REDUCE_SPEED_ANGLE   (25)   ///< Max angle amplitude where speed reduction factor is applied
+#define DB_ANGULAR_SPEED_FACTOR (35)   ///< Constant applied to the normalized angle to target error
+#define DB_ANGULAR_SIDE_FACTOR  (-1)   ///< Angular side factor
+#elif defined(BOARD_DOTBOT_V2)
+#define DB_MAX_SPEED            (70)   ///< Max speed in autonomous control mode
 #define DB_REDUCE_SPEED_FACTOR  (0.8)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_ANGLE   (25)   ///< Max angle amplitude where speed reduction factor is applied
 #define DB_ANGULAR_SPEED_FACTOR (35)   ///< Constant applied to the normalized angle to target error
 #define DB_ANGULAR_SIDE_FACTOR  (-1)   ///< Angular side factor
 #else                                  // BOARD_DOTBOT_V1
+#define DB_MAX_SPEED            (70)   ///< Max speed in autonomous control mode
 #define DB_REDUCE_SPEED_FACTOR  (0.9)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_ANGLE   (20)   ///< Max angle amplitude where speed reduction factor is applied
 #define DB_ANGULAR_SPEED_FACTOR (30)   ///< Constant applied to the normalized angle to target error
@@ -138,11 +145,11 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
         {
             db_motors_set_speed(0, 0);
             _dotbot_vars.control_mode = ControlManual;
-            uint16_t threshold        = 0;
+            uint16_t threshold = 0;
             memcpy(&threshold, cmd_ptr, sizeof(uint16_t));
             cmd_ptr += sizeof(uint16_t);
             _dotbot_vars.waypoints_threshold = (uint32_t)threshold;
-            _dotbot_vars.waypoints.length    = (uint8_t)*cmd_ptr++;
+            _dotbot_vars.waypoints.length = (uint8_t)*cmd_ptr++;
             memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, _dotbot_vars.waypoints.length * sizeof(protocol_lh2_location_t));
             _dotbot_vars.next_waypoint_idx = 0;
             if (_dotbot_vars.waypoints.length > 0) {
@@ -276,13 +283,8 @@ static void _update_control_loop(void) {
             speedReductionFactor = DB_REDUCE_SPEED_FACTOR;
         }
         angular_speed = (int16_t)(((float)error_angle / 180) * DB_ANGULAR_SPEED_FACTOR);
-#if defined(BOARD_DOTBOT_V3)
-        left_speed = (int16_t)(((DB_MAX_SPEED * speedReductionFactor) + (angular_speed * DB_ANGULAR_SIDE_FACTOR)));
-        right_speed = (int16_t)(((DB_MAX_SPEED * speedReductionFactor) - (angular_speed * DB_ANGULAR_SIDE_FACTOR)));
-#else
         left_speed = (int16_t)(((DB_MAX_SPEED * speedReductionFactor) - (angular_speed * DB_ANGULAR_SIDE_FACTOR)));
         right_speed = (int16_t)(((DB_MAX_SPEED * speedReductionFactor) + (angular_speed * DB_ANGULAR_SIDE_FACTOR)));
-#endif
         if (left_speed > DB_MAX_SPEED) {
             left_speed = DB_MAX_SPEED;
         }
