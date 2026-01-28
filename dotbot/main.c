@@ -48,7 +48,7 @@
 #define DB_ANGULAR_SIDE_FACTOR  (-1)   ///< Angular side factor
 #elif defined(BOARD_DOTBOT_V3)
 #define DB_MAX_SPEED                     (75)     ///< Max speed in autonomous control mode
-#define DB_REDUCE_SPEED_FACTOR_WAYPOINT  (0.65)  ///< Reduction factor applied to speed when close to target or error angle is too large
+#define DB_REDUCE_SPEED_FACTOR_WAYPOINT  (1)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_FACTOR_TURN      (0.65)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_ANGLE   (30)   ///< Max angle amplitude where speed reduction factor is applied
 #define DB_ANGULAR_SPEED_FACTOR (45)   ///< Constant applied to the normalized angle to target error
