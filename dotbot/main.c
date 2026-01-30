@@ -37,15 +37,22 @@
 #define DB_TIMEOUT_CHECK_DELAY_MS   (200U)   ///< 200ms delay between each timeout delay check
 #define TIMEOUT_CHECK_DELAY_TICKS   (17000)  ///< ~500 ms delay between packet received timeout checks
 #define DB_BUFFER_MAX_BYTES         (255U)   ///< Max bytes in UART receive buffer
-#define DB_DIRECTION_THRESHOLD      (0.01)   ///< Threshold to update the direction
+#define DB_DIRECTION_THRESHOLD      (50)     ///< Threshold to update the direction in mm
 #define DB_DIRECTION_INVALID        (-1000)  ///< Invalid angle e.g out of [0, 360] range
-#define DB_MAX_SPEED                (70)     ///< Max speed in autonomous control mode
-#if defined(BOARD_DOTBOT_V2)
+#if defined(BOARD_DOTBOT_V3)
+#define DB_MAX_SPEED            (60)   ///< Max speed in autonomous control mode
+#define DB_REDUCE_SPEED_FACTOR  (0.7)  ///< Reduction factor applied to speed when close to target or error angle is too large
+#define DB_REDUCE_SPEED_ANGLE   (25)   ///< Max angle amplitude where speed reduction factor is applied
+#define DB_ANGULAR_SPEED_FACTOR (35)   ///< Constant applied to the normalized angle to target error
+#define DB_ANGULAR_SIDE_FACTOR  (-1)   ///< Angular side factor
+#elif defined(BOARD_DOTBOT_V2)
+#define DB_MAX_SPEED            (70)   ///< Max speed in autonomous control mode
 #define DB_REDUCE_SPEED_FACTOR  (0.8)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_ANGLE   (25)   ///< Max angle amplitude where speed reduction factor is applied
 #define DB_ANGULAR_SPEED_FACTOR (35)   ///< Constant applied to the normalized angle to target error
 #define DB_ANGULAR_SIDE_FACTOR  (-1)   ///< Angular side factor
 #else                                  // BOARD_DOTBOT_V1
+#define DB_MAX_SPEED            (70)   ///< Max speed in autonomous control mode
 #define DB_REDUCE_SPEED_FACTOR  (0.9)  ///< Reduction factor applied to speed when close to target or error angle is too large
 #define DB_REDUCE_SPEED_ANGLE   (20)   ///< Max angle amplitude where speed reduction factor is applied
 #define DB_ANGULAR_SPEED_FACTOR (30)   ///< Constant applied to the normalized angle to target error
@@ -53,8 +60,8 @@
 #endif
 
 typedef struct {
-    uint32_t x;  ///< X coordinate, multiplied by 1e6
-    uint32_t y;  ///< Y coordinate, multiplied by 1e6
+    uint32_t x;  ///< X coordinate in mm
+    uint32_t y;  ///< Y coordinate in mm
 } position_2d_t;
 
 typedef struct {
@@ -138,7 +145,10 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
         {
             db_motors_set_speed(0, 0);
             _dotbot_vars.control_mode = ControlManual;
-            _dotbot_vars.waypoints_threshold = (uint32_t)((uint8_t)*cmd_ptr++ * 1000);
+            uint16_t threshold = 0;
+            memcpy(&threshold, cmd_ptr, sizeof(uint16_t));
+            cmd_ptr += sizeof(uint16_t);
+            _dotbot_vars.waypoints_threshold = (uint32_t)threshold;
             _dotbot_vars.waypoints.length = (uint8_t)*cmd_ptr++;
             memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, _dotbot_vars.waypoints.length * sizeof(protocol_lh2_location_t));
             _dotbot_vars.next_waypoint_idx = 0;
@@ -211,7 +221,7 @@ int main(void) {
         if (_dotbot_vars.advertize) {
             size_t length = 0;
             _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_ADVERTISEMENT;
-            _dotbot_vars.radio_buffer[length++] = true;
+            _dotbot_vars.radio_buffer[length++] = 0xff;
             memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.direction, sizeof(int16_t));
             length += sizeof(int16_t);
             memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.current_location, sizeof(protocol_lh2_location_t));
@@ -233,13 +243,13 @@ static void _update_control_loop(void) {
         db_motors_set_speed(0, 0);
         return;
     }
-    float dx = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].x - (float)_dotbot_vars.last_position.x) / 1e6;
-    float dy = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].y - (float)_dotbot_vars.last_position.y) / 1e6;
+    float dx = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].x - (float)_dotbot_vars.last_position.x);
+    float dy = ((float)_dotbot_vars.waypoints.points[_dotbot_vars.next_waypoint_idx].y - (float)_dotbot_vars.last_position.y);
     float distanceToTarget = sqrtf(powf(dx, 2) + powf(dy, 2));
 
     float speedReductionFactor = 1.0;  // No reduction by default
 
-    if ((uint32_t)(distanceToTarget * 1e6) < _dotbot_vars.waypoints_threshold * 2) {
+    if ((uint32_t)(distanceToTarget) < _dotbot_vars.waypoints_threshold * 2) {
         speedReductionFactor = DB_REDUCE_SPEED_FACTOR;
     }
 
@@ -248,7 +258,7 @@ static void _update_control_loop(void) {
     int16_t angular_speed = 0;
     int16_t angle_to_target = 0;
     int16_t error_angle = 0;
-    if ((uint32_t)(distanceToTarget * 1e6) < _dotbot_vars.waypoints_threshold) {
+    if ((uint32_t)(distanceToTarget) < _dotbot_vars.waypoints_threshold) {
         // Target waypoint is reached
         _dotbot_vars.next_waypoint_idx++;
     } else if (_dotbot_vars.direction == DB_DIRECTION_INVALID) {
@@ -273,13 +283,8 @@ static void _update_control_loop(void) {
             speedReductionFactor = DB_REDUCE_SPEED_FACTOR;
         }
         angular_speed = (int16_t)(((float)error_angle / 180) * DB_ANGULAR_SPEED_FACTOR);
-#if defined(BOARD_DOTBOT_V3)
-        left_speed = (int16_t)(((DB_MAX_SPEED * speedReductionFactor) + (angular_speed * DB_ANGULAR_SIDE_FACTOR)));
-        right_speed = (int16_t)(((DB_MAX_SPEED * speedReductionFactor) - (angular_speed * DB_ANGULAR_SIDE_FACTOR)));
-#else
         left_speed = (int16_t)(((DB_MAX_SPEED * speedReductionFactor) - (angular_speed * DB_ANGULAR_SIDE_FACTOR)));
         right_speed = (int16_t)(((DB_MAX_SPEED * speedReductionFactor) + (angular_speed * DB_ANGULAR_SIDE_FACTOR)));
-#endif
         if (left_speed > DB_MAX_SPEED) {
             left_speed = DB_MAX_SPEED;
         }
@@ -292,8 +297,8 @@ static void _update_control_loop(void) {
 }
 
 static void _compute_angle(const protocol_lh2_location_t *next, const protocol_lh2_location_t *origin, int16_t *angle) {
-    float dx = ((float)next->x - (float)origin->x) / 1e6;
-    float dy = ((float)next->y - (float)origin->y) / 1e6;
+    float dx = ((float)next->x - (float)origin->x);
+    float dy = ((float)next->y - (float)origin->y);
     float distance = sqrtf(powf(dx, 2) + powf(dy, 2));
 
     if (distance < DB_DIRECTION_THRESHOLD) {
@@ -309,7 +314,7 @@ static void _compute_angle(const protocol_lh2_location_t *next, const protocol_l
 
 static void _timeout_check(void) {
     uint32_t ticks = db_timer_ticks(TIMER_DEV);
-    if (ticks > _dotbot_vars.ts_last_packet_received + TIMEOUT_CHECK_DELAY_TICKS) {
+    if (_dotbot_vars.control_mode != ControlAuto && ticks > _dotbot_vars.ts_last_packet_received + TIMEOUT_CHECK_DELAY_TICKS) {
         db_motors_set_speed(0, 0);
     }
 }
