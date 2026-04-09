@@ -48,7 +48,6 @@ typedef struct {
     uint32_t ts_last_packet_received;           ///< Last timestamp in microseconds a control packet was received
     uint8_t radio_buffer[DB_BUFFER_MAX_BYTES];  ///< Internal buffer that contains the command to send (from buttons)
     position_2d_t last_position;                ///< Last computed LH2 location received
-    int16_t direction;                          ///< Current direction of the DotBot (angle in °)
     protocol_control_mode_t control_mode;       ///< Remote control mode
     protocol_lh2_waypoints_t waypoints;         ///< List of waypoints
     bool update_control_loop;                   ///< Whether the control loop need an update
@@ -152,7 +151,7 @@ int main(void) {
 
     // Set an invalid heading since the value is unknown on startup.
     // Control loop is stopped
-    _dotbot_vars.direction = DB_DIRECTION_INVALID;
+    _control_vars.direction = DB_DIRECTION_INVALID;
     _dotbot_vars.update_control_loop = false;
     _dotbot_vars.advertize = false;
     _dotbot_vars.update_position = false;
@@ -197,7 +196,7 @@ int main(void) {
             size_t length = 0;
             _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_ADVERTISEMENT;
             _dotbot_vars.radio_buffer[length++] = 0xff;
-            memcpy(&_dotbot_vars.radio_buffer[length], &_dotbot_vars.direction, sizeof(int16_t));
+            memcpy(&_dotbot_vars.radio_buffer[length], &_control_vars.direction, sizeof(int16_t));
             length += sizeof(int16_t);
             protocol_lh2_location_t position = {
                 .x = _control_vars.pos_x,
@@ -219,19 +218,19 @@ int main(void) {
 //=========================== private functions ================================
 
 static void _update_control_loop(void) {
+    if (_control_vars.waypoint_idx >= _control_vars.waypoints_length) {
+        // Guard against stale index before indexing the waypoints array
+        return;
+    }
     _control_vars.waypoint_x = _dotbot_vars.waypoints.points[_control_vars.waypoint_idx].x;
     _control_vars.waypoint_y = _dotbot_vars.waypoints.points[_control_vars.waypoint_idx].y;
     update_control(&_control_vars);
     db_motors_set_speed(_control_vars.pwm_left, _control_vars.pwm_right);
 
-    if (_control_vars.waypoint_idx >= _control_vars.waypoints_length) {
-        _control_vars.pwm_right = 0;
-        _control_vars.pwm_left = 0;
+    if (_control_vars.all_done) {
         _control_vars.waypoint_idx = 0;
         _dotbot_vars.control_mode = ControlManual;
     }
-
-    db_motors_set_speed(_control_vars.pwm_left, _control_vars.pwm_right);
 }
 
 static void _timeout_check(void) {
