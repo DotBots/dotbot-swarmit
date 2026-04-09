@@ -201,7 +201,6 @@ int main(void) {
             protocol_lh2_location_t position = {
                 .x = _control_vars.pos_x,
                 .y = _control_vars.pos_y,
-                .z = 0,
             };
             memcpy(&_dotbot_vars.radio_buffer[length], &position, sizeof(protocol_lh2_location_t));
             length += sizeof(protocol_lh2_location_t);
