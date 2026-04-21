@@ -24,6 +24,7 @@
 #include "gpio.h"
 #include "protocol.h"
 #include "motors.h"
+#include "qdec.h"
 #include "rgbled_pwm.h"
 #include "timer.h"
 #include "control_loop.h"
@@ -33,6 +34,8 @@
 #define DB_RADIO_FREQ               (8U)      ///< Set the frequency to 2408 MHz
 #define RADIO_APP                   (DotBot)  ///< DotBot Radio App
 #define TIMER_DEV                   (0)
+#define QDEC_LEFT                   (0)      ///< Left wheel QDEC peripheral index
+#define QDEC_RIGHT                  (1)      ///< Right wheel QDEC peripheral index
 #define DB_POSITION_UPDATE_DELAY_MS (100U)   ///< 100ms delay between each LH2 position updates
 #define DB_ADVERTIZEMENT_DELAY_MS   (500U)   ///< 500ms delay between each advertisement packet sending
 #define DB_TIMEOUT_CHECK_DELAY_MS   (200U)   ///< 200ms delay between each timeout delay check
@@ -74,6 +77,7 @@ void swarmit_localization_handle_isr(void);
 
 static dotbot_vars_t _dotbot_vars = { 0 };
 static robot_control_t _control_vars = { 0 };
+static void *_control_ctx = NULL;
 
 #ifdef DB_RGB_LED_PWM_RED_PORT  // Only available on DotBot v2
 static const db_rgbled_pwm_conf_t rgbled_pwm_conf = {
@@ -123,11 +127,19 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
             uint16_t threshold = 0;
             memcpy(&threshold, cmd_ptr, sizeof(uint16_t));
             cmd_ptr += sizeof(uint16_t);
-            _control_vars.waypoint_threshold = (uint32_t)threshold;
-            _control_vars.waypoints_length = (uint8_t)*cmd_ptr++;
-            memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, _dotbot_vars.waypoints.length * sizeof(protocol_lh2_location_t));
-            _control_vars.waypoint_idx = 0;
-            if (_control_vars.waypoints_length > 0) {
+            uint8_t count = (uint8_t)*cmd_ptr++;
+            memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, count * sizeof(protocol_lh2_location_t));
+            coordinate_t waypoints[DB_MAX_WAYPOINTS];
+            for (uint8_t i = 0; i < count; i++) {
+                waypoints[i].x = _dotbot_vars.waypoints.points[i].x;
+                waypoints[i].y = _dotbot_vars.waypoints.points[i].y;
+            }
+            control_loop_set_waypoints(_control_ctx, waypoints, count, (uint32_t)threshold);
+            _control_vars.encoder_left = 0;
+            _control_vars.encoder_right = 0;
+            db_qdec_read_and_clear(QDEC_LEFT);
+            db_qdec_read_and_clear(QDEC_RIGHT);
+            if (count > 0) {
                 _dotbot_vars.control_mode = ControlAuto;
             } else {
                 db_motors_set_speed(0, 0);
@@ -208,6 +220,18 @@ int main(void) {
             swarmit_get_battery_level(&battery_level);
             memcpy(&_dotbot_vars.radio_buffer[length], &battery_level, sizeof(uint16_t));
             length += sizeof(uint16_t);
+            memcpy(&_dotbot_vars.radio_buffer[length++], &_control_vars.pwm_left, sizeof(int8_t));
+            memcpy(&_dotbot_vars.radio_buffer[length++], &_control_vars.pwm_right, sizeof(int8_t));
+            memcpy(&_dotbot_vars.radio_buffer[length++], &_dotbot_vars.control_mode, sizeof(uint8_t));
+            memcpy(&_dotbot_vars.radio_buffer[length], &_control_vars.encoder_left, sizeof(int32_t));
+            length += sizeof(int32_t);
+            memcpy(&_dotbot_vars.radio_buffer[length], &_control_vars.encoder_right, sizeof(int32_t));
+            length += sizeof(int32_t);
+            memcpy(&_dotbot_vars.radio_buffer[length], &_control_vars.waypoint_x, sizeof(uint32_t));
+            length += sizeof(uint32_t);
+            memcpy(&_dotbot_vars.radio_buffer[length], &_control_vars.waypoint_y, sizeof(uint32_t));
+            length += sizeof(uint32_t);
+            memcpy(&_dotbot_vars.radio_buffer[length++], &_control_vars.waypoint_idx, sizeof(uint8_t));
             swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
             _dotbot_vars.advertize = false;
         }
@@ -217,17 +241,12 @@ int main(void) {
 //=========================== private functions ================================
 
 static void _update_control_loop(void) {
-    if (_control_vars.waypoint_idx >= _control_vars.waypoints_length) {
-        // Guard against stale index before indexing the waypoints array
-        return;
-    }
-    _control_vars.waypoint_x = _dotbot_vars.waypoints.points[_control_vars.waypoint_idx].x;
-    _control_vars.waypoint_y = _dotbot_vars.waypoints.points[_control_vars.waypoint_idx].y;
-    update_control(&_control_vars);
+    _control_vars.encoder_left = db_qdec_read_and_clear(QDEC_LEFT);
+    _control_vars.encoder_right = db_qdec_read_and_clear(QDEC_RIGHT);
+    update_control(&_control_vars, _control_ctx);
     db_motors_set_speed(_control_vars.pwm_left, _control_vars.pwm_right);
 
     if (_control_vars.all_done) {
-        _control_vars.waypoint_idx = 0;
         _dotbot_vars.control_mode = ControlManual;
     }
 }
