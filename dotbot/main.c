@@ -196,6 +196,7 @@ int main(void) {
         if (_dotbot_vars.advertize) {
             size_t length = 0;
             _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_ADVERTISEMENT;
+            // calibrated bitmask hard-coded 0xff: secure side doesn't expose per-LH calibration state via NSC yet.
             _dotbot_vars.radio_buffer[length++] = 0xff;
             memcpy(&_dotbot_vars.radio_buffer[length], &_control_vars.direction, sizeof(int16_t));
             length += sizeof(int16_t);
