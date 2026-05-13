@@ -169,8 +169,7 @@ int main(void) {
 
         if (_dotbot_vars.update_position) {
             swarmit_keep_alive();
-            position_2d_t current_position = { 0 };
-            swarmit_localization_get_position(&current_position);
+            swarmit_localization_get_position(&_dotbot_vars.last_position);
 
             coordinate_t location = {
                 .x = (uint32_t)(_dotbot_vars.last_position.x),
