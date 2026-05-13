@@ -223,6 +223,12 @@ int main(void) {
             swarmit_get_battery_level(&battery_level);
             memcpy(&_dotbot_vars.radio_buffer[length], &battery_level, sizeof(uint16_t));
             length += sizeof(uint16_t);
+            // pwm_left, pwm_right, mode, encoder_left, encoder_right,
+            // waypoint_x, waypoint_y, waypoint_idx — zeroed placeholders
+            // until plumbed in, kept to satisfy PyDotBot's full
+            // DOTBOT_ADVERTISEMENT layout.
+            memset(&_dotbot_vars.radio_buffer[length], 0, 20);
+            length += 20;
             swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
             _dotbot_vars.advertize = false;
         }
