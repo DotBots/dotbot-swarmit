@@ -107,6 +107,8 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
             protocol_move_raw_command_t *command = (protocol_move_raw_command_t *)cmd_ptr;
             int16_t left = (int16_t)(100 * ((float)command->left_y / INT8_MAX));
             int16_t right = (int16_t)(100 * ((float)command->right_y / INT8_MAX));
+            _control_vars.pwm_left = left;
+            _control_vars.pwm_right = right;
             db_motors_set_speed(left, right);
         } break;
         case DB_PROTOCOL_CMD_RGB_LED:
