@@ -171,12 +171,18 @@ int main(void) {
         __WFE();
 
         if (_dotbot_vars.update_position) {
+            _dotbot_vars.update_position = false;
             swarmit_keep_alive();
             swarmit_localization_get_position(&_dotbot_vars.last_position);
 
+            if (_dotbot_vars.last_position.x > 100000 || _dotbot_vars.last_position.y > 100000) {
+                // Invalid coordinates, do not update direction and upload position
+                continue;
+            }
+
             coordinate_t location = {
-                .x = (uint32_t)(_dotbot_vars.last_position.x),
-                .y = (uint32_t)(_dotbot_vars.last_position.y),
+                .x = _dotbot_vars.last_position.x,
+                .y = _dotbot_vars.last_position.y,
             };
             coordinate_t last_location = { .x = _control_vars.pos_x, .y = _control_vars.pos_y };
             int16_t angle = _control_vars.direction;
@@ -186,7 +192,6 @@ int main(void) {
                 _control_vars.pos_y = location.y;
             }
             _dotbot_vars.update_control_loop = (_dotbot_vars.control_mode == ControlAuto);
-            _dotbot_vars.update_position = false;
         }
 
         if (_dotbot_vars.update_control_loop) {
