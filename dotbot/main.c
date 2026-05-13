@@ -75,6 +75,7 @@ void swarmit_localization_handle_isr(void);
 
 static dotbot_vars_t _dotbot_vars = { 0 };
 static robot_control_t _control_vars = { 0 };
+static void *_control_ctx = NULL;
 
 #ifdef DB_RGB_LED_PWM_RED_PORT  // Only available on DotBot v2
 static const db_rgbled_pwm_conf_t rgbled_pwm_conf = {
@@ -126,12 +127,17 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
             uint16_t threshold = 0;
             memcpy(&threshold, cmd_ptr, sizeof(uint16_t));
             cmd_ptr += sizeof(uint16_t);
-            _control_vars.waypoint_threshold = (uint32_t)threshold;
-            _dotbot_vars.waypoints.length = (uint8_t)*cmd_ptr++;
-            _control_vars.waypoints_length = _dotbot_vars.waypoints.length;
-            memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, _dotbot_vars.waypoints.length * sizeof(protocol_lh2_location_t));
-            _control_vars.waypoint_idx = 0;
-            if (_control_vars.waypoints_length > 0) {
+            uint8_t count = (uint8_t)*cmd_ptr++;
+            memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, count * sizeof(protocol_lh2_location_t));
+            coordinate_t waypoints[DB_MAX_WAYPOINTS];
+            for (uint8_t i = 0; i < count; i++) {
+                waypoints[i].x = _dotbot_vars.waypoints.points[i].x;
+                waypoints[i].y = _dotbot_vars.waypoints.points[i].y;
+            }
+            control_loop_set_waypoints(_control_ctx, waypoints, count, (uint32_t)threshold);
+            _control_vars.encoder_left = 0;
+            _control_vars.encoder_right = 0;
+            if (count > 0) {
                 _dotbot_vars.control_mode = ControlAuto;
             } else {
                 db_motors_set_speed(0, 0);
@@ -152,6 +158,7 @@ int main(void) {
 #endif
     db_motors_init();
     db_gpio_init(&db_led1, DB_GPIO_OUT);
+    _control_ctx = control_loop_alloc();
 
     // Set an invalid heading since the value is unknown on startup.
     // Control loop is stopped
@@ -238,17 +245,10 @@ int main(void) {
 //=========================== private functions ================================
 
 static void _update_control_loop(void) {
-    if (_control_vars.waypoint_idx >= _control_vars.waypoints_length) {
-        // Guard against stale index before indexing the waypoints array
-        return;
-    }
-    _control_vars.waypoint_x = _dotbot_vars.waypoints.points[_control_vars.waypoint_idx].x;
-    _control_vars.waypoint_y = _dotbot_vars.waypoints.points[_control_vars.waypoint_idx].y;
-    update_control(&_control_vars);
+    update_control(&_control_vars, _control_ctx);
     db_motors_set_speed(_control_vars.pwm_left, _control_vars.pwm_right);
 
     if (_control_vars.all_done) {
-        _control_vars.waypoint_idx = 0;
         _dotbot_vars.control_mode = ControlManual;
     }
 }
