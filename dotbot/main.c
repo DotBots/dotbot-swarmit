@@ -38,6 +38,7 @@
 #define DB_TIMEOUT_CHECK_DELAY_MS   (200U)   ///< 200ms delay between each timeout delay check
 #define TIMEOUT_CHECK_DELAY_TICKS   (17000)  ///< ~500 ms delay between packet received timeout checks
 #define DB_BUFFER_MAX_BYTES         (255U)   ///< Max bytes in UART receive buffer
+#define DB_LH2_OUTLIER_THRESHOLD    (500U)   ///< Max allowed displacement (mm) between two consecutive LH2 fixes
 
 typedef struct {
     uint32_t x;  ///< X coordinate in mm
@@ -185,6 +186,12 @@ int main(void) {
                 .y = _dotbot_vars.last_position.y,
             };
             coordinate_t last_location = { .x = _control_vars.pos_x, .y = _control_vars.pos_y };
+            float dlx = (float)location.x - (float)last_location.x;
+            float dly = (float)location.y - (float)last_location.y;
+            if (_control_vars.pos_x != 0 && _control_vars.pos_y != 0 &&
+                sqrtf(dlx * dlx + dly * dly) > DB_LH2_OUTLIER_THRESHOLD) {
+                continue;
+            }
             int16_t angle = _control_vars.direction;
             if (compute_angle(&last_location, &location, &angle)) {
                 _control_vars.direction = angle;
