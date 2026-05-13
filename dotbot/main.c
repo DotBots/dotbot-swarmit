@@ -126,7 +126,8 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
             memcpy(&threshold, cmd_ptr, sizeof(uint16_t));
             cmd_ptr += sizeof(uint16_t);
             _control_vars.waypoint_threshold = (uint32_t)threshold;
-            _control_vars.waypoints_length = (uint8_t)*cmd_ptr++;
+            _dotbot_vars.waypoints.length = (uint8_t)*cmd_ptr++;
+            _control_vars.waypoints_length = _dotbot_vars.waypoints.length;
             memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, _dotbot_vars.waypoints.length * sizeof(protocol_lh2_location_t));
             _control_vars.waypoint_idx = 0;
             if (_control_vars.waypoints_length > 0) {
