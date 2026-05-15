@@ -38,6 +38,7 @@
 #define DB_TIMEOUT_CHECK_DELAY_MS   (200U)   ///< 200ms delay between each timeout delay check
 #define TIMEOUT_CHECK_DELAY_TICKS   (17000)  ///< ~500 ms delay between packet received timeout checks
 #define DB_BUFFER_MAX_BYTES         (255U)   ///< Max bytes in UART receive buffer
+#define DB_LH2_OUTLIER_THRESHOLD    (500U)   ///< Max allowed displacement (mm) between two consecutive LH2 fixes
 
 typedef struct {
     uint32_t x;  ///< X coordinate in mm
@@ -74,6 +75,7 @@ void swarmit_localization_handle_isr(void);
 
 static dotbot_vars_t _dotbot_vars = { 0 };
 static robot_control_t _control_vars = { 0 };
+static void *_control_ctx = NULL;
 
 #ifdef DB_RGB_LED_PWM_RED_PORT  // Only available on DotBot v2
 static const db_rgbled_pwm_conf_t rgbled_pwm_conf = {
@@ -107,6 +109,8 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
             protocol_move_raw_command_t *command = (protocol_move_raw_command_t *)cmd_ptr;
             int16_t left = (int16_t)(100 * ((float)command->left_y / INT8_MAX));
             int16_t right = (int16_t)(100 * ((float)command->right_y / INT8_MAX));
+            _control_vars.pwm_left = left;
+            _control_vars.pwm_right = right;
             db_motors_set_speed(left, right);
         } break;
         case DB_PROTOCOL_CMD_RGB_LED:
@@ -123,11 +127,17 @@ static void _rx_data_callback(const uint8_t *pkt, size_t len) {
             uint16_t threshold = 0;
             memcpy(&threshold, cmd_ptr, sizeof(uint16_t));
             cmd_ptr += sizeof(uint16_t);
-            _control_vars.waypoint_threshold = (uint32_t)threshold;
-            _control_vars.waypoints_length = (uint8_t)*cmd_ptr++;
-            memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, _dotbot_vars.waypoints.length * sizeof(protocol_lh2_location_t));
-            _control_vars.waypoint_idx = 0;
-            if (_control_vars.waypoints_length > 0) {
+            uint8_t count = (uint8_t)*cmd_ptr++;
+            memcpy(&_dotbot_vars.waypoints.points, cmd_ptr, count * sizeof(protocol_lh2_location_t));
+            coordinate_t waypoints[DB_MAX_WAYPOINTS];
+            for (uint8_t i = 0; i < count; i++) {
+                waypoints[i].x = _dotbot_vars.waypoints.points[i].x;
+                waypoints[i].y = _dotbot_vars.waypoints.points[i].y;
+            }
+            control_loop_set_waypoints(_control_ctx, waypoints, count, (uint32_t)threshold);
+            _control_vars.encoder_left = 0;
+            _control_vars.encoder_right = 0;
+            if (count > 0) {
                 _dotbot_vars.control_mode = ControlAuto;
             } else {
                 db_motors_set_speed(0, 0);
@@ -148,6 +158,7 @@ int main(void) {
 #endif
     db_motors_init();
     db_gpio_init(&db_led1, DB_GPIO_OUT);
+    _control_ctx = control_loop_alloc();
 
     // Set an invalid heading since the value is unknown on startup.
     // Control loop is stopped
@@ -168,15 +179,26 @@ int main(void) {
         __WFE();
 
         if (_dotbot_vars.update_position) {
+            _dotbot_vars.update_position = false;
             swarmit_keep_alive();
-            position_2d_t current_position = { 0 };
-            swarmit_localization_get_position(&current_position);
+            swarmit_localization_get_position(&_dotbot_vars.last_position);
+
+            if (_dotbot_vars.last_position.x > 100000 || _dotbot_vars.last_position.y > 100000) {
+                // Invalid coordinates, do not update direction and upload position
+                continue;
+            }
 
             coordinate_t location = {
-                .x = (uint32_t)(_dotbot_vars.last_position.x),
-                .y = (uint32_t)(_dotbot_vars.last_position.y),
+                .x = _dotbot_vars.last_position.x,
+                .y = _dotbot_vars.last_position.y,
             };
             coordinate_t last_location = { .x = _control_vars.pos_x, .y = _control_vars.pos_y };
+            float dlx = (float)location.x - (float)last_location.x;
+            float dly = (float)location.y - (float)last_location.y;
+            if (_control_vars.pos_x != 0 && _control_vars.pos_y != 0 &&
+                sqrtf(dlx * dlx + dly * dly) > DB_LH2_OUTLIER_THRESHOLD) {
+                continue;
+            }
             int16_t angle = _control_vars.direction;
             if (compute_angle(&last_location, &location, &angle)) {
                 _control_vars.direction = angle;
@@ -184,7 +206,6 @@ int main(void) {
                 _control_vars.pos_y = location.y;
             }
             _dotbot_vars.update_control_loop = (_dotbot_vars.control_mode == ControlAuto);
-            _dotbot_vars.update_position = false;
         }
 
         if (_dotbot_vars.update_control_loop) {
@@ -195,6 +216,7 @@ int main(void) {
         if (_dotbot_vars.advertize) {
             size_t length = 0;
             _dotbot_vars.radio_buffer[length++] = DB_PROTOCOL_DOTBOT_ADVERTISEMENT;
+            // calibrated bitmask hard-coded 0xff: secure side doesn't expose per-LH calibration state via NSC yet.
             _dotbot_vars.radio_buffer[length++] = 0xff;
             memcpy(&_dotbot_vars.radio_buffer[length], &_control_vars.direction, sizeof(int16_t));
             length += sizeof(int16_t);
@@ -208,6 +230,12 @@ int main(void) {
             swarmit_get_battery_level(&battery_level);
             memcpy(&_dotbot_vars.radio_buffer[length], &battery_level, sizeof(uint16_t));
             length += sizeof(uint16_t);
+            // pwm_left, pwm_right, mode, encoder_left, encoder_right,
+            // waypoint_x, waypoint_y, waypoint_idx — zeroed placeholders
+            // until plumbed in, kept to satisfy PyDotBot's full
+            // DOTBOT_ADVERTISEMENT layout.
+            memset(&_dotbot_vars.radio_buffer[length], 0, 20);
+            length += 20;
             swarmit_send_raw_data(_dotbot_vars.radio_buffer, length);
             _dotbot_vars.advertize = false;
         }
@@ -217,17 +245,10 @@ int main(void) {
 //=========================== private functions ================================
 
 static void _update_control_loop(void) {
-    if (_control_vars.waypoint_idx >= _control_vars.waypoints_length) {
-        // Guard against stale index before indexing the waypoints array
-        return;
-    }
-    _control_vars.waypoint_x = _dotbot_vars.waypoints.points[_control_vars.waypoint_idx].x;
-    _control_vars.waypoint_y = _dotbot_vars.waypoints.points[_control_vars.waypoint_idx].y;
-    update_control(&_control_vars);
+    update_control(&_control_vars, _control_ctx);
     db_motors_set_speed(_control_vars.pwm_left, _control_vars.pwm_right);
 
     if (_control_vars.all_done) {
-        _control_vars.waypoint_idx = 0;
         _dotbot_vars.control_mode = ControlManual;
     }
 }
